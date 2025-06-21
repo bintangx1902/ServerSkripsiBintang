@@ -3,6 +3,8 @@
 import os
 import sys
 
+import gdown
+
 
 def main():
     """Run administrative tasks."""
@@ -18,5 +20,24 @@ def main():
     execute_from_command_line(sys.argv)
 
 
+def check_and_download_model():
+    print("*** Checking Model")
+    url_audio = r'https://drive.google.com/file/d/171cFnI700UAWvGoBCYpKsnJmicZSE7ze/view?usp=sharing'
+    url_image = r'https://drive.google.com/file/d/1bUc1adATx94d8I-kvdsMMjCM3BfdLjKz/view?usp=sharing'
+    model_path = 'static/model'
+    os.makedirs(model_path, exist_ok=True)
+
+    print("*** Check Audio Model")
+    if not os.path.exists(os.path.join(model_path, 'model_audio.h5')):
+        print("*** Download Audio Model")
+        gdown.download(url_audio, os.path.join(model_path, 'model_audio.h5'), fuzzy=True)
+
+    print("*** Check Image Model")
+    if not os.path.exists(os.path.join(model_path, 'model_image.h5')):
+        print("*** Download Image Model")
+        gdown.download(url_image, os.path.join(model_path, 'model_image.h5'), fuzzy=True)
+
+
 if __name__ == '__main__':
+    check_and_download_model()
     main()
