@@ -1,8 +1,11 @@
 import os
 
+import numpy as np
+import pandas as pd
 import tensorflow as tf
-from audio import preprocess_audio
+from pydub import AudioSegment
 
+from audio import preprocess_audio
 
 
 class AudioModel:
@@ -79,7 +82,67 @@ class ImageModel:
 
         return model
 
-def load_data(file, model):
-    spectrogram = preprocess_audio(file)
-    # spectrogram = add_noise(spectrogram)
-    return spectrogram
+
+def load_data(file_dir):
+    files = []
+    for file in os.listdir(file_dir):
+        filepath = os.path.join(file_dir, file)
+        files.append(filepath)
+
+    audio = pd.DataFrame({'filepath': files, })
+    with tf.device('/GPU:0'):
+        audio['data'] = audio.filepath.apply(preprocess_audio)
+
+    x_audio_train = np.stack(audio['data'].values)
+    return x_audio_train
+
+
+def split_audio(input_file, output_dir, segment_duration=3000) -> list:
+    """
+    Split audio file into segments of specified duration (in milliseconds).
+
+    Args:
+        input_file: Path to input audio file
+        output_dir: Directory to save output segments
+        segment_duration: Duration of each segment in milliseconds (default: 3000ms = 3 seconds)
+
+    Returns:
+        List of paths to saved segment files
+    """
+    # Create output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Initialize list to store output paths
+    saved_paths = []
+
+    # Load audio file
+    audio = AudioSegment.from_file(input_file)
+
+    # Get total duration in milliseconds
+    total_duration = len(audio)
+
+    # Calculate number of full segments and remaining duration
+    num_segments = total_duration // segment_duration
+    remainder = total_duration % segment_duration
+
+    # Split and export segments
+    for i in range(num_segments):
+        start_time = i * segment_duration
+        end_time = start_time + segment_duration
+        segment = audio[start_time:end_time]
+
+        # Generate output filename
+        output_file = os.path.join(output_dir, f"segment_{i + 1:03d}.wav")
+        segment.export(output_file, format="wav")
+        saved_paths.append(output_file)
+
+    # Export remainder if it exists
+    if remainder > 0:
+        start_time = num_segments * segment_duration
+        segment = audio[start_time:]
+        output_file = os.path.join(output_dir, f"segment_{num_segments + 1:03d}_remainder.wav")
+        segment.export(output_file, format="wav")
+        saved_paths.append(output_file)
+
+    return saved_paths

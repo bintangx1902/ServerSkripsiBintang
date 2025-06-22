@@ -24,10 +24,9 @@ BASE_DIR = path.dirname(path.dirname(path.abspath(__file__)))
 SECRET_KEY = 'django-insecure-9ogm-rqb=s5tc*)c4dhtvb*_*jstagq^ch@gm6o^_sjtg7vr*i'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True 
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-
 
 # Application definition
 
@@ -38,9 +37,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'rest_framework',
+    'corsheaders'
     'api'
 ]
+
+# Update this allowed origin
+CORS_ALLOWED_ORIGINS = [
+    "https://saqku.zaws.net",
+]
+SECURE_REFERRER_POLICY = 'same-origin'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -72,7 +78,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'detection.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -82,7 +87,6 @@ DATABASES = {
         'NAME': path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -102,7 +106,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -114,11 +117,23 @@ USE_I18N = True
 
 USE_TZ = True
 
+ALLOWED_AUDIO_EXTENSIONS = ['mp3', 'wav', 'mp4', 'm4a']
+ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg']
+ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mpg', 'mpeg']
+
+IMAGE_DICT = {'angry': 0, 'disgust': 1, 'fear': 2, 'happy': 3, 'neutral': 4, 'sad': 5, 'surprise': 6}
+AUDIO_DICT = {'angry': 0, 'calm': 1, 'disgust': 2, 'fear': 3, 'happy': 4, 'neutral': 5, 'sad': 6, 'surprise': 7}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = path.join(BASE_DIR, 'media')
+
+STATICFILES_DIRS = [path.join(BASE_DIR, 'static')]
+STATIC_ROOT = path.join(BASE_DIR, 'static')
+TEMPORARY_FILE_DIR = path.join(MEDIA_ROOT, 'temp')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
