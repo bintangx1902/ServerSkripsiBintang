@@ -57,8 +57,7 @@ class PredictAudio(APIView):
                 os.makedirs(temp_filepath, exist_ok=True)
                 
                 divided_audio = split_audio(temp_filename, temp_filepath)
-                
-                data = load_data(temp_filename)
+                data = load_data(divided_audio)
 
                 pred = self.model.predict(data)
                 prediction = np.argmax(pred)
