@@ -1,22 +1,20 @@
 import tempfile
 from shutil import copyfileobj
 
-import numpy as np
 from django.conf import settings
 from rest_framework import status
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from pydub import AudioSegment
 from api.serilalizers import FileUploadSerializer
 from utils.loader import *
 
-model_path = os.path.join(settings.STATIC_PATH, 'model', 'model_audio.h5')
+model_path = os.path.join(settings.STATIC_DIR, 'model', 'model_audio.h5')
 audioModel = AudioModel(model_path)
-model_path = os.path.join(settings.STATIC_PATH, 'model', 'model_image.h5')
+model_path = os.path.join(settings.STATIC_DIR, 'model', 'model_image.h5')
 imageModel = ImageModel(model_path)
-
-data_dict = {3: 'lapar', 1: 'bersendawa atau sendawa', 2: 'tidak nyaman', 0: 'sakit perut', 4: 'lelah atau letih'}
 
 
 class PredictVideo(APIView):
@@ -31,7 +29,7 @@ class PredictAudio(APIView):
     renderer_classes = [JSONRenderer, ]
 
     def get(self, request, *args, **kwargs):
-        return
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def post(self, request, *args, **kwargs):
         serializer = FileUploadSerializer(data=request.data)
@@ -55,15 +53,23 @@ class PredictAudio(APIView):
                 get_name_ext = temp_filename.split('.')
                 temp_filepath, filename_ext = get_name_ext[0], get_name_ext[-1]
                 os.makedirs(temp_filepath, exist_ok=True)
-                
-                divided_audio = split_audio(temp_filename, temp_filepath)
-                data = load_data(divided_audio)
 
-                pred = self.model.predict(data)
-                prediction = np.argmax(pred)
-                confidence = np.max(pred)
-                confidence = 100.0 if confidence * 100 > 1.0 else confidence
-                pred_result = data_dict[prediction]
+                divided_audio = split_audio(temp_filename, temp_filepath)
+                data = load_audio_data(divided_audio)
+
+                predictions = audioModel.predict(data)
+                prediction_results, confidence_result = [], []
+                for pred in predictions:
+                    prediction = np.argmax(pred)
+                    confidence = np.max(pred)
+                    confidence = 100.0 if confidence * 100 > 1.0 else confidence * 100
+                    prediction_results.append(
+                        next((k for k, v in settings.AUDIO_DICT.items() if v == prediction), None))
+                    confidence_result.append(confidence)
+
+                return Response(data={'predictions': prediction_results, 'confidence': confidence_result},
+                                status=status.HTTP_200_OK)
+
             except Exception as e:
                 message = f"Error while predicting audio file: {e}"
                 return Response({'error': message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -71,23 +77,32 @@ class PredictAudio(APIView):
                 if os.path.exists(temp_filename):
                     os.remove(temp_filename)
 
-            # hiraukan karena data yang masuk ga akan di save
-            save_dir = os.path.join(settings.MEDIA_ROOT, 'result', str(prediction))
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir, exist_ok=True)
-
-            save_path = os.path.join(save_dir, uploaded_file.name)
-            with open(save_path, 'wb+') as destination:
-                copyfileobj(uploaded_file, destination)
-
-            return Response(data={'predictions': pred_result, 'confidence': confidence}, status=status.HTTP_200_OK)
-
         return Response({'error': serializer.errors['file']}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PredictImage(APIView):
     def get(self, request, *args, **kwargs):
-        return
+        return Response({}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def post(self, request, *args, **kwargs):
-        return
+        serializer = FileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            file = self.request.FILES['file']
+            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=".jpg")
+
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+            temp_file.flush()
+            temp_file.close()
+
+            try:
+                # save the file into temp
+                file = load_image_data(file)
+            except Exception as e:
+                pass
+            finally:
+                pass
+
+        return Response(data={
+            'dir': dir(serializer),
+        })

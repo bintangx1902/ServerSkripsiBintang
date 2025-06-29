@@ -5,7 +5,8 @@ import pandas as pd
 import tensorflow as tf
 from pydub import AudioSegment
 
-from audio import preprocess_audio
+from .audio import preprocess_audio
+from .image import preprocess_image
 
 
 class AudioModel:
@@ -40,8 +41,10 @@ class AudioModel:
                 print('Finished loading audio model')
         else:
             print("Model file not found at:", model_path)
-
         return model
+
+    def predict(self, audio_spectrogram):
+        return self.model.predict(audio_spectrogram)
 
 
 class ImageModel:
@@ -83,18 +86,24 @@ class ImageModel:
         return model
 
 
-def load_data(file_dir):
-    files = []
-    for file in os.listdir(file_dir):
-        filepath = os.path.join(file_dir, file)
-        files.append(filepath)
-
-    audio = pd.DataFrame({'filepath': files, })
+def load_audio_data(file_dir_list):
+    audio = pd.DataFrame({'filepath': file_dir_list, })
     with tf.device('/GPU:0'):
         audio['data'] = audio.filepath.apply(preprocess_audio)
 
     x_audio_train = np.stack(audio['data'].values)
     return x_audio_train
+
+
+def load_image_data(file_dir_list):
+    image = pd.DataFrame({'filepath': file_dir_list, })
+    with tf.device('/GPU:0'):
+        image['data'] = image['filepath'].apply(
+            lambda x: preprocess_image(x, (128, 110),
+                                       preprocess_function=tf.keras.applications.vgg19.preprocess_input,
+                                       augment=True)
+        )
+    return np.stack(image['data'].values)
 
 
 def split_audio(input_file, output_dir, segment_duration=3000) -> list:

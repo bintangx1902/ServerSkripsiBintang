@@ -4,5 +4,9 @@
 **/*.iml
 
 .idea
+.idea/*.*
 
 **/*.h5
+
+venv/
+venv
