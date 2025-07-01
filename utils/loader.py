@@ -126,7 +126,7 @@ def split_audio(input_file, output_dir, segment_duration=3000) -> list:
     saved_paths = []
 
     # Load audio file
-    audio = AudioSegment.from_file(input_file)
+    audio = AudioSegment.from_file(input_file, format="wav" if hasattr(input_file, 'read') else None)
 
     # Get total duration in milliseconds
     total_duration = len(audio)

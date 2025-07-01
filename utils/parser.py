@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import moviepy.editor as mp
-from os import path
+from os import path, makedirs
 import random
 from PIL import Image
 
@@ -123,13 +123,6 @@ class VideoParser:
         self.video_clip = mp.VideoFileClip(video_path)
         self.output_path = output_path
 
-    def split_video(self, output_path=None):
-        video_no_audio = self.video_clip.without_audio()
-        path_ = output_path if output_path is not None else self.output_path
-        path_ = path.join(path_, 'vid_clean.mp4')
-        video_no_audio.write_videofile(path_, codec="libx264", audio=False)
-        return path_
-
     def split_audio(self, output_path=None):
         audio = self.video_clip.audio
         _path = output_path if output_path is not None else self.output_path
@@ -139,6 +132,8 @@ class VideoParser:
 
     def extract_image(self, output_path=None):
         output_path = output_path if output_path is not None else self.output_path
+        output_path = path.join(output_path, 'frame')
+        makedirs(output_path, exist_ok=True)
 
         duration = self.video_clip.duration
         interval = 3
@@ -151,7 +146,7 @@ class VideoParser:
             random_time = random.uniform(start, end)
             frame = self.video_clip.get_frame(random_time)
             image = Image.fromarray(np.uint8(frame))
-            image_path = path.join(self.output_path, f"frame_{i + 1}.jpg")
+            image_path = path.join(output_path, f"frame_{i + 1}.jpg")
             image.save(image_path)
             image_paths.append(image_path)
 
@@ -159,4 +154,4 @@ class VideoParser:
 
     def get(self, output_path=None):
         output_path = output_path if output_path is not None else self.output_path
-        return self.split_video(output_path), self.split_audio(output_path)
+        return self.extract_image(output_path), self.split_audio(output_path)

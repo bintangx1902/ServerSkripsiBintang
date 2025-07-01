@@ -1,5 +1,5 @@
 import tempfile
-from shutil import copyfileobj
+from shutil import rmtree
 
 from django.conf import settings
 from rest_framework import status
@@ -38,7 +38,17 @@ class PredictVideo(APIView):
                 temp_filepath, filename_ext = get_name_ext[0], get_name_ext[-1]
                 os.makedirs(os.path.dirname(temp_filepath), exist_ok=True)
                 vid = VideoParser(temp_file.name)
-                video, audio = vid.get(temp_filepath)
+                image_frames, audio = vid.get(temp_filepath)
+                audio = split_audio(audio, temp_filepath)
+
+                image_data = load_image_data(image_frames)
+                audio_data = load_audio_data(audio)
+
+                image_predictions = ImageModel.predict(image_data)
+                audio_predictions = AudioModel.predict(audio_data)
+
+
+
             except Exception as e:
                 pass
             finally:
@@ -96,8 +106,8 @@ class PredictAudio(APIView):
                 message = f"Error while predicting audio file: {e}"
                 return Response({'error': message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             finally:
-                if os.path.exists(temp_filename):
-                    os.remove(temp_filename)
+                if os.path.exists(temp_path):
+                    rmtree(temp_path)
 
         return Response({'error': serializer.errors['file']}, status=status.HTTP_400_BAD_REQUEST)
 
