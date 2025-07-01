@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from pydub import AudioSegment
 from api.serilalizers import FileUploadSerializer
 from utils.loader import *
+from utils.parser import *
 
 model_path = os.path.join(settings.STATIC_DIR, 'model', 'model_audio.h5')
 audioModel = AudioModel(model_path)
@@ -19,9 +20,30 @@ imageModel = ImageModel(model_path)
 
 class PredictVideo(APIView):
     def get(self, request, *args, **kwargs):
-        return
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
     def post(self, request, *args, **kwargs):
+        serializer = FileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            video = request.FILES.get('file', None)
+            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.TEMPORARY_FILE_DIR, suffix='.mp4')
+            for chunk in video.chunks():
+                temp_file.write(chunk)
+            temp_file.flush()
+            temp_file.close()
+
+            try:
+                # create new folder for output
+                get_name_ext = str(temp_file.name).split('.')
+                temp_filepath, filename_ext = get_name_ext[0], get_name_ext[-1]
+                os.makedirs(os.path.dirname(temp_filepath), exist_ok=True)
+                vid = VideoParser(temp_file.name)
+                video, audio = vid.get(temp_filepath)
+            except Exception as e:
+                pass
+            finally:
+                if os.path.exists(temp_file.name):
+                    os.remove(temp_file.name)
         return
 
 
@@ -88,7 +110,7 @@ class PredictImage(APIView):
         serializer = FileUploadSerializer(data=request.data)
         if serializer.is_valid():
             file = self.request.FILES['file']
-            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=".jpg")
+            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.TEMPORARY_FILE_DIR, suffix=".jpg")
 
             for chunk in file.chunks():
                 temp_file.write(chunk)
