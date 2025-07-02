@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from pydub import AudioSegment
 from api.serilalizers import FileUploadSerializer
 from utils.loader import *
+from utils.parser import get_results
 
 model_path = os.path.join(settings.STATIC_DIR, 'model', 'model_audio.h5')
 audioModel = AudioModel(model_path)
@@ -58,14 +59,7 @@ class PredictAudio(APIView):
                 data = load_audio_data(divided_audio)
 
                 predictions = audioModel.predict(data)
-                prediction_results, confidence_result = [], []
-                for pred in predictions:
-                    prediction = np.argmax(pred)
-                    confidence = np.max(pred)
-                    confidence = 100.0 if confidence * 100 > 1.0 else confidence * 100
-                    prediction_results.append(
-                        next((k for k, v in settings.AUDIO_DICT.items() if v == prediction), None))
-                    confidence_result.append(confidence)
+                prediction_results, confidence_result = get_results(predictions, settings.AUDIO_DICT)
 
                 return Response(data={'predictions': prediction_results, 'confidence': confidence_result},
                                 status=status.HTTP_200_OK)
@@ -86,6 +80,7 @@ class PredictImage(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = FileUploadSerializer(data=request.data)
+        temp_dir = settings.TEMPORARY_FILE_DIR
         if serializer.is_valid():
             file = self.request.FILES['file']
             temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=".jpg")
@@ -96,13 +91,17 @@ class PredictImage(APIView):
             temp_file.close()
 
             try:
-                # save the file into temp
-                file = load_image_data(file)
-            except Exception as e:
-                pass
-            finally:
-                pass
+                data = load_image_data([temp_file.name])
+                predictions = imageModel.predict(data)
+                prediction_results, confidence_result = get_results(predictions, settings.IMAGE_DICT)
 
-        return Response(data={
-            'dir': dir(serializer),
-        })
+                return Response(data={'predictions': prediction_results, 'confidence': confidence_result},
+                                status=status.HTTP_200_OK)
+
+            except Exception as e:
+                print(f"Error while predicting image file: {e}")
+            finally:
+                if os.path.exists(temp_file.name):
+                    os.remove(temp_file.name)
+
+        return Response({'error': serializer.errors['file']}, status=status.HTTP_400_BAD_REQUEST)

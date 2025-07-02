@@ -127,3 +127,16 @@ class VideoParser:
     def get_audio(self, output_path):
         audio = self.video_clip.audio
         audio.write_audiofile(output_path)
+        
+
+def get_results(predictions, label_dict:dict=None):
+    prediction_results, confidence_result = [], []
+    for pred in predictions:
+        prediction = np.argmax(pred)
+        confidence = np.max(pred)
+        confidence = 100.0 if confidence * 100 > 100.0 else confidence * 100
+        confidence_result.append(confidence)
+        prediction_results.append(next((k for k, v in label_dict.items() if v == prediction), None))
+        
+    return prediction_results, confidence_result
+    
