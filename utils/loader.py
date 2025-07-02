@@ -84,6 +84,10 @@ class ImageModel:
             print("Model file not found at:", model_path)
 
         return model
+    
+    def predict(self, images):
+        return self.model.predict(images)
+        
 
 
 def load_audio_data(file_dir_list):
@@ -99,7 +103,7 @@ def load_image_data(file_dir_list):
     image = pd.DataFrame({'filepath': file_dir_list, })
     with tf.device('/GPU:0'):
         image['data'] = image['filepath'].apply(
-            lambda x: preprocess_image(x, (128, 110),
+            lambda x: preprocess_image(x, (100, 100),
                                        preprocess_function=tf.keras.applications.vgg19.preprocess_input,
                                        augment=True)
         )
