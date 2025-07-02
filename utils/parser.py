@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import moviepy.editor as mp
+from os import path, makedirs
+import random
+from PIL import Image
 
 
 def plot_model(model: tf.keras.Model, show_shapes=False, show_layer_names=False):
@@ -106,37 +109,49 @@ def balance_dataframe(df, target_total):
 def create_temporary_file(input_file):
     return input_file
 
+
 class VideoParser:
     """
     usage :
     parser = VideoParser("path/to/video.mp4")
     parser.get_video_without_audio("video_no_audio.mp4")
     parser.get_audio("audio.mp3")
-
     """
-    def __init__(self, video_path):
+
+    def __init__(self, video_path, output_path=None):
         self.video_path = video_path
         self.video_clip = mp.VideoFileClip(video_path)
-    
-    
-    def get_video_without_audio(self, output_path):
-        video_no_audio = self.video_clip.without_audio()
-        video_no_audio.write_videofile(output_path, codec="libx264", audio=False)
-    
-    
-    def get_audio(self, output_path):
-        audio = self.video_clip.audio
-        audio.write_audiofile(output_path)
-        
+        self.output_path = output_path
 
-def get_results(predictions, label_dict:dict=None):
-    prediction_results, confidence_result = [], []
-    for pred in predictions:
-        prediction = np.argmax(pred)
-        confidence = np.max(pred)
-        confidence = 100.0 if confidence * 100 > 100.0 else confidence * 100
-        confidence_result.append(confidence)
-        prediction_results.append(next((k for k, v in label_dict.items() if v == prediction), None))
-        
-    return prediction_results, confidence_result
-    
+    def split_audio(self, output_path=None):
+        audio = self.video_clip.audio
+        _path = output_path if output_path is not None else self.output_path
+        _path = path.join(_path, 'audio_clean.mp3')
+        audio.write_audiofile(_path)
+        return _path
+
+    def extract_image(self, output_path=None):
+        output_path = output_path if output_path is not None else self.output_path
+        output_path = path.join(output_path, 'frame')
+        makedirs(output_path, exist_ok=True)
+
+        duration = self.video_clip.duration
+        interval = 3
+        num_images = int(duration // interval) + (1 if duration % interval >= 1 else 0)
+        image_paths = []
+
+        for i in range(num_images):
+            start = i * interval
+            end = min((i * 1) + interval, duration)
+            random_time = random.uniform(start, end)
+            frame = self.video_clip.get_frame(random_time)
+            image = Image.fromarray(np.uint8(frame))
+            image_path = path.join(output_path, f"frame_{i + 1}.jpg")
+            image.save(image_path)
+            image_paths.append(image_path)
+
+        return image_paths
+
+    def get(self, output_path=None):
+        output_path = output_path if output_path is not None else self.output_path
+        return self.extract_image(output_path), self.split_audio(output_path)
