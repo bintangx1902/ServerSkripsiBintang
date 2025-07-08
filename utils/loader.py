@@ -43,7 +43,7 @@ class AudioModel:
             print("Model file not found at:", model_path)
         return model
 
-    def predict(self, audio_spectrogram):
+    def predict_data(self, audio_spectrogram):
         return self.model.predict(audio_spectrogram)
 
 
@@ -85,7 +85,7 @@ class ImageModel:
 
         return model
     
-    def predict(self, images):
+    def predict_data(self, images):
         return self.model.predict(images)
         
 

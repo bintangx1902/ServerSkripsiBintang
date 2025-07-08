@@ -155,3 +155,16 @@ class VideoParser:
     def get(self, output_path=None):
         output_path = output_path if output_path is not None else self.output_path
         return self.extract_image(output_path), self.split_audio(output_path)
+
+
+def get_results(predictions, label_dict:dict) :
+    pred_classes, confidences = [], []
+    for pred in predictions:
+        pred_class = np.argmax(pred)
+        confidence = np.max(pred)
+        confidence = 100 if confidence * 100 > 100 else confidence * 100
+        pred_class = next((k for k, v in label_dict.items() if v == pred_class), None)
+
+        pred_classes.append(pred_class)
+        confidences.append(confidence)
+    return pred_classes, confidences

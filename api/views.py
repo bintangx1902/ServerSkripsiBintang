@@ -7,8 +7,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from pydub import AudioSegment
-from api.serilalizers import FileUploadSerializer
+from api.serilalizers import FileUploadSerializer, OutputSerializer
 from utils.loader import *
 from utils.parser import *
 
@@ -31,7 +30,7 @@ class PredictVideo(APIView):
                 temp_file.write(chunk)
             temp_file.flush()
             temp_file.close()
-
+            temp_filepath = ""
             try:
                 # create new folder for output
                 get_name_ext = str(temp_file.name).split('.')
@@ -44,17 +43,33 @@ class PredictVideo(APIView):
                 image_data = load_image_data(image_frames)
                 audio_data = load_audio_data(audio)
 
-                image_predictions = ImageModel.predict(image_data)
-                audio_predictions = AudioModel.predict(audio_data)
+                audio_predictions = audioModel.predict_data(audio_data)
+                image_predictions = imageModel.predict_data(image_data)
 
+                image_predictions, image_confidences = get_results(image_predictions, settings.IMAGE_DICT)
+                audio_predictions, audio_confidences = get_results(audio_predictions, settings.AUDIO_DICT)
 
-
+                output = {
+                    "video": {
+                        "predicted_classes": image_predictions,
+                        "confidences": image_confidences
+                    },
+                    "audio": {
+                        "predicted_classes": audio_predictions,
+                        "confidences": audio_confidences
+                    }
+                }
+                response = OutputSerializer(data=output)
+                if response.is_valid():
+                    return Response(response.data, status=status.HTTP_200_OK)
+                return Response(response.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Exception as e:
-                pass
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             finally:
                 if os.path.exists(temp_file.name):
                     os.remove(temp_file.name)
-        return
+                    rmtree(temp_filepath)
+        return None
 
 
 class PredictAudio(APIView):
@@ -114,7 +129,7 @@ class PredictImage(APIView):
         temp_dir = settings.TEMPORARY_FILE_DIR
         if serializer.is_valid():
             file = self.request.FILES['file']
-            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=settings.TEMPORARY_FILE_DIR, suffix=".jpg")
+            temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir, suffix=".jpg")
 
             for chunk in file.chunks():
                 temp_file.write(chunk)
