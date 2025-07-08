@@ -104,7 +104,7 @@ class PredictAudio(APIView):
                 divided_audio = split_audio(temp_filename, temp_filepath)
                 data = load_audio_data(divided_audio)
 
-                predictions = audioModel.predict(data)
+                predictions = audioModel.predict_data(data)
                 prediction_results, confidence_result = get_results(predictions, settings.AUDIO_DICT)
 
                 return Response(data={'predictions': prediction_results, 'confidence': confidence_result},
@@ -138,7 +138,7 @@ class PredictImage(APIView):
 
             try:
                 data = load_image_data([temp_file.name])
-                predictions = imageModel.predict(data)
+                predictions = imageModel.predict_data(data)
                 prediction_results, confidence_result = get_results(predictions, settings.IMAGE_DICT)
 
                 return Response(data={'predictions': prediction_results, 'confidence': confidence_result},
